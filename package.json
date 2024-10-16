@@ -1,0 +1,17 @@
+{
+  "name": "codecapture",
+  "version": "1.0.0",
+  "description": "Easily transform code into educational videos",
+  "main": "index.js",
+  "scripts": {
+    "generate": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Alex Goodman",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.7",
+    "highlight.js": "^11.10.0",
+    "puppeteer": "^23.5.3"
+  }
+}
