@@ -3,8 +3,11 @@ const path = require("path");
 const puppeteer = require("puppeteer");
 const hljs = require("highlight.js");
 const axios = require("axios");
+require("dotenv").config();
 
-async function parseCodeSnippets(filePath, minLines = 10, maxLines = 20) {
+const TARGET_SUBJECT = "A multi-page rich text editor for the web.";
+
+async function parseCodeSnippets(filePath, minLines = 20, maxLines = 30) {
   const content = await fs.readFile(filePath, "utf8");
   const lines = content.split("\n");
   const snippets = [];
@@ -12,23 +15,32 @@ async function parseCodeSnippets(filePath, minLines = 10, maxLines = 20) {
   let braceCount = 0;
 
   for (const line of lines) {
-    // console.info("line", line);
     currentSnippet.push(line);
-    braceCount +=
-      (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
 
-    if (
-      // (braceCount === 0 && currentSnippet.length > 1) ||
-      (currentSnippet.length >= minLines && braceCount > 1) ||
-      currentSnippet.length >= maxLines
-    ) {
+    // Count opening braces
+    braceCount += (line.match(/{/g) || []).length;
+
+    // Check for closing brace at the end of the line
+    if (line.trim().endsWith("}") || line.trim().endsWith("};")) {
+      braceCount--;
+
+      // If braces are balanced and we have at least minLines
+      if (currentSnippet.length >= minLines) {
+        snippets.push(currentSnippet.join("\n"));
+        currentSnippet = [];
+      }
+    }
+
+    // If we've reached maxLines, force a new snippet
+    if (currentSnippet.length >= maxLines) {
       snippets.push(currentSnippet.join("\n"));
       currentSnippet = [];
-      braceCount = 0;
+      braceCount = 0; // Reset brace count
     }
   }
 
-  if (currentSnippet.length > 0) {
+  // Add any remaining lines as the last snippet if it meets minLines
+  if (currentSnippet.length >= minLines) {
     snippets.push(currentSnippet.join("\n"));
   }
 
@@ -58,18 +70,34 @@ async function renderCodeToImage(code, filename) {
         </html>
     `;
 
+  await page.setViewport({ width: 800, height: 800 });
   await page.setContent(html);
   await page.screenshot({ path: filename, omitBackground: true });
   await browser.close();
 }
 
-async function generateScriptFromAI(code) {
-  // Replace with your actual AI API call
-  const response = await axios.post(
-    "https://api.openai.com/v1/engines/davinci-codex/completions",
+async function generateScriptFromAI(code, conversationHistory) {
+  console.info("generateScript");
+  const messages = [
     {
-      prompt: `Explain this code concisely:\n${code}\n\nExplanation:`,
-      max_tokens: 150,
+      role: "system",
+      content:
+        "You are an expert programmer tasked with explaining code snippets. Provide concise, clear explanations that highlight the key concepts and functionality of the code. This code will be about: " +
+        TARGET_SUBJECT,
+    },
+    ...conversationHistory,
+    {
+      role: "user",
+      content: `Explain this code snippet concisely:\n\n${code}`,
+    },
+  ];
+
+  const response = await axios.post(
+    "https://api.openai.com/v1/chat/completions",
+    {
+      model: "gpt-4o-mini", // or "gpt-4" if you have access
+      messages: messages,
+      // max_tokens: 150,
     },
     {
       headers: {
@@ -79,14 +107,15 @@ async function generateScriptFromAI(code) {
     }
   );
 
-  return response.data.choices[0].text.trim();
+  console.info("response", response);
+
+  return response.data.choices[0].message.content.trim();
 }
 
 async function processFile(filePath) {
   const snippets = await parseCodeSnippets(filePath);
   const baseName = path.basename(filePath, path.extname(filePath));
-
-  // console.info("snippets", snippets[0], snippets[1], snippets[2]);
+  let conversationHistory = [];
 
   for (let i = 0; i < snippets.length; i++) {
     const snippet = snippets[i];
@@ -96,9 +125,20 @@ async function processFile(filePath) {
     await renderCodeToImage(snippet, imageFilename);
     console.log(`Generated image: ${imageFilename}`);
 
-    // const script = await generateScriptFromAI(snippet);
+    // const script = await generateScriptFromAI(snippet, conversationHistory);
     // await fs.writeFile(scriptFilename, script);
     // console.log(`Generated script: ${scriptFilename}`);
+
+    // // Add the current explanation to the conversation history
+    // conversationHistory.push(
+    //   { role: "user", content: `Explain this code snippet:\n\n${snippet}` },
+    //   { role: "assistant", content: script }
+    // );
+
+    // // Optionally, limit the conversation history to prevent it from growing too large
+    // if (conversationHistory.length > 10) {
+    //   conversationHistory = conversationHistory.slice(-10);
+    // }
   }
 }
 
