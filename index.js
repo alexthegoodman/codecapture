@@ -4,7 +4,7 @@ const puppeteer = require("puppeteer");
 const hljs = require("highlight.js");
 const axios = require("axios");
 
-async function parseCodeSnippets(filePath, maxLines = 30) {
+async function parseCodeSnippets(filePath, minLines = 10, maxLines = 20) {
   const content = await fs.readFile(filePath, "utf8");
   const lines = content.split("\n");
   const snippets = [];
@@ -12,12 +12,14 @@ async function parseCodeSnippets(filePath, maxLines = 30) {
   let braceCount = 0;
 
   for (const line of lines) {
+    // console.info("line", line);
     currentSnippet.push(line);
     braceCount +=
       (line.match(/{/g) || []).length - (line.match(/}/g) || []).length;
 
     if (
-      (braceCount === 0 && currentSnippet.length > 1) ||
+      // (braceCount === 0 && currentSnippet.length > 1) ||
+      (currentSnippet.length >= minLines && braceCount > 1) ||
       currentSnippet.length >= maxLines
     ) {
       snippets.push(currentSnippet.join("\n"));
@@ -83,6 +85,8 @@ async function generateScriptFromAI(code) {
 async function processFile(filePath) {
   const snippets = await parseCodeSnippets(filePath);
   const baseName = path.basename(filePath, path.extname(filePath));
+
+  // console.info("snippets", snippets[0], snippets[1], snippets[2]);
 
   for (let i = 0; i < snippets.length; i++) {
     const snippet = snippets[i];
