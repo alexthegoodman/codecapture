@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "generate": "node index.js",
+    "merge-txt": "node merge-txt.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Alex Goodman",
@@ -12,6 +13,7 @@
   "dependencies": {
     "axios": "^1.7.7",
     "dotenv": "^16.4.5",
+    "glob": "^11.0.0",
     "highlight.js": "^11.10.0",
     "puppeteer": "^23.5.3"
   }

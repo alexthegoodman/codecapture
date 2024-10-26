@@ -6,6 +6,7 @@ const axios = require("axios");
 require("dotenv").config();
 
 const TARGET_SUBJECT = "A multi-page rich text editor for the web.";
+const TARGET_FOLDER = "./generated/common-rte/";
 
 async function parseCodeSnippets(filePath, minLines = 20, maxLines = 30) {
   const content = await fs.readFile(filePath, "utf8");
@@ -56,8 +57,11 @@ async function renderCodeToImage(code, filename) {
         <html>
         <head>
             <style>
-                body { background: white; margin: 0; padding: 20px; }
-                pre { margin: 0; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.4; }
+                body { background: white; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; }
+                pre { 
+                  margin: 0; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.4; 
+                  width: fit-content; box-shadow: 0px 15px 15px 4px rgba(0, 0, 0, 0.12); border-radius: 15px; padding: 25px;
+                }
                 ${await fs.readFile(
                   require.resolve("highlight.js/styles/github.css"),
                   "utf8"
@@ -72,7 +76,10 @@ async function renderCodeToImage(code, filename) {
 
   await page.setViewport({ width: 800, height: 800 });
   await page.setContent(html);
-  await page.screenshot({ path: filename, omitBackground: true });
+  await page.screenshot({
+    path: TARGET_FOLDER + filename,
+    omitBackground: true,
+  });
   await browser.close();
 }
 
@@ -125,20 +132,20 @@ async function processFile(filePath) {
     await renderCodeToImage(snippet, imageFilename);
     console.log(`Generated image: ${imageFilename}`);
 
-    // const script = await generateScriptFromAI(snippet, conversationHistory);
-    // await fs.writeFile(scriptFilename, script);
-    // console.log(`Generated script: ${scriptFilename}`);
+    const script = await generateScriptFromAI(snippet, conversationHistory);
+    await fs.writeFile(TARGET_FOLDER + scriptFilename, script);
+    console.log(`Generated script: ${scriptFilename}`);
 
-    // // Add the current explanation to the conversation history
-    // conversationHistory.push(
-    //   { role: "user", content: `Explain this code snippet:\n\n${snippet}` },
-    //   { role: "assistant", content: script }
-    // );
+    // Add the current explanation to the conversation history
+    conversationHistory.push(
+      { role: "user", content: `Explain this code snippet:\n\n${snippet}` },
+      { role: "assistant", content: script }
+    );
 
-    // // Optionally, limit the conversation history to prevent it from growing too large
-    // if (conversationHistory.length > 10) {
-    //   conversationHistory = conversationHistory.slice(-10);
-    // }
+    // Optionally, limit the conversation history to prevent it from growing too large
+    if (conversationHistory.length > 10) {
+      conversationHistory = conversationHistory.slice(-10);
+    }
   }
 }
 
