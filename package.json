@@ -6,6 +6,7 @@
   "scripts": {
     "generate": "node index.js",
     "merge-txt": "node merge-txt.js",
+    "audio": "node audio.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Alex Goodman",
@@ -15,6 +16,7 @@
     "dotenv": "^16.4.5",
     "glob": "^11.0.0",
     "highlight.js": "^11.10.0",
+    "openai": "^4.68.4",
     "puppeteer": "^23.5.3"
   }
 }
